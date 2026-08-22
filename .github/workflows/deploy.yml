@@ -32,6 +32,10 @@ jobs:
         run: npm run check
       - name: Build Astro site
         run: npm run build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run browser smoke tests
+        run: npm run test:e2e -- --project=chromium --project=mobile-chromium
       - name: Upload static artifact
         uses: actions/upload-artifact@v4
         with:

@@ -23,7 +23,14 @@ The site runs at `http://localhost:4321`. Build the production output with:
 ```bash
 npm run check
 npm run build
+npm run test:e2e
 ```
+
+The browser suite starts Astro on an isolated local port and runs against a
+repository-managed Playwright browser. Install browsers once with
+`npx playwright install chromium firefox webkit` when running the full suite
+locally. The default CI workflow runs desktop and mobile Chromium smoke tests;
+the Firefox and WebKit projects are available for cross-platform verification.
 
 ## Azure Static Web Apps
 
