@@ -42,9 +42,12 @@ secrets before enabling deployment:
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV`
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_PROD`
 
-The Bicep placeholder follows the Cloud Security Dojo naming pattern:
-`NP-ninjapaws-site-Dev-CentralUS` and `NP-ninjapaws-site-Prod-CentralUS`.
-No Azure resources are provisioned by this repository yet.
+The Bicep deployment under [`infra/`](infra/) provisions the Static Web Apps
+resource. Shared Bicep compilation and committed-template drift checks consume
+the immutable reusable validator from [Pawprint](https://github.com/ninjapaw/pawprint);
+site content and the Static Web Apps publish step remain owned by this repository.
+The deployment workflow requires the matching environment token before it can
+publish `dev` or `main`.
 
 ## Links
 
