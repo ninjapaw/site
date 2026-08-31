@@ -94,10 +94,43 @@ projects.
   `ninjapaw/pawprint/.github/workflows/kit-bicep-validate.yml@3e261301bb1a70bcd25f3891117c16ebd8065ca5`,
   which owns Bicep compilation, linting, and committed-ARM drift detection for
   `infra/**`.
+- Deployment consumes `kit-deploy-static-site.yml`, which owns the
+  branch-to-environment binding, the build, the Static Web Apps publish and the
+  release. Only this repository's own pre-build checks are passed in.
+- Promotion consumes `kit-promote.yml`.
 - `bicepconfig.json` mirrors the Pawprint linter ruleset so local builds and the
   shared validator agree, including `use-recent-api-versions`.
 - Repository-specific checks stay local (Astro type checks, Playwright smoke
   tests), while cross-repo guardrails are centralized in Pawprint.
+
+### Vendored files
+
+Bicep has no module registry available here, so shared modules and scripts are
+copied into `vendor/pawprint/` with paths mirroring the Pawprint repository:
+
+| Vendored path                                      | Owns                                          |
+| -------------------------------------------------- | --------------------------------------------- |
+| `modules/static-site/main.bicep`                   | The Static Web App and its optional custom domain |
+| `scripts/deploy-config.mjs`                        | Resolving `config/deploy.config.json` to environment variables |
+| `scripts/validate-environment.sh`                  | Refusing malformed deployment variables       |
+
+Do not edit these copies. `kit-bicep-validate.yml` fails the build when one
+drifts from its source, which is what stops a copy quietly becoming a fork.
+Change the file in Pawprint and re-vendor from there:
+
+```bash
+# from a Pawprint checkout
+node scripts/vendor-sync.mjs --target ../site --check
+node scripts/vendor-sync.mjs --target ../site
+```
+
+### Azure identity
+
+`AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` are GitHub
+**Variables**, not Secrets. With OIDC federated credentials there is no client
+secret, and these identifiers appear in every resource id a deployment prints,
+so marking them secret only redacts the deployment log to `***`. `AZURE_TENANT_ID`
+and `AZURE_LOCATION` are organisation-level; the rest are per Environment.
 
 The Pawprint reference is pinned to an immutable commit SHA so behavior is
 deterministic and reviewable. When Pawprint publishes stable release tags for
