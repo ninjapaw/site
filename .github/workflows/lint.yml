@@ -17,6 +17,10 @@ concurrency:
 jobs:
   pawprint-bicep:
     name: Pawprint Bicep contract
+    # The reusable workflow declares id-token: write, so the caller must grant it.
+    permissions:
+      contents: read
+      id-token: write
     uses: ninjapaw/pawprint/.github/workflows/kit-bicep-validate.yml@18e1d946fa59333e4905a83759748f04887a5e02
     with:
       bicep-glob: "infra/**/*.bicep"
