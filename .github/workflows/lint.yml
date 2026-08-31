@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pawprint-bicep:
+    name: Pawprint Bicep contract
+    uses: ninjapaw/pawprint/.github/workflows/kit-bicep-validate.yml@18e1d946fa59333e4905a83759748f04887a5e02
+    with:
+      bicep-glob: "infra/**/*.bicep"
+      check-committed-arm: true
+      fail-on-lint-warning: true
+
+  validate:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run config:check
+      - run: npm run check
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- --project=chromium --project=mobile-chromium

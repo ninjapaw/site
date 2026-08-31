@@ -1,0 +1,43 @@
+{
+  "configVersion": "1.0.0",
+  "project": {
+    "name": "Ninja Paws HQ",
+    "slug": "ninjapaws-hq",
+    "organization": "Ninja Paw",
+    "license": "MIT",
+    "repository": "https://github.com/ninjapaw/site",
+    "support": "https://github.com/ninjapaw/site/issues"
+  },
+  "defaults": {
+    "deploymentTarget": "azure-static-web-app",
+    "location": "centralus",
+    "siteSku": "Free",
+    "siteBase": "/"
+  },
+  "environments": {
+    "dev": {
+      "branch": "dev",
+      "githubEnvironment": "dev",
+      "azureEnvironment": "development",
+      "subscriptionId": "",
+      "location": "centralus",
+      "resourceGroup": "NP-NinjaPawsSite-Dev-CentralUS",
+      "staticWebAppName": "np-ninjapaws-site-dev-centralus",
+      "siteSku": "Free",
+      "customDomain": "dev.ninjapaws.org",
+      "publicSiteUrl": "https://dev.ninjapaws.org"
+    },
+    "prod": {
+      "branch": "main",
+      "githubEnvironment": "prod",
+      "azureEnvironment": "production",
+      "subscriptionId": "",
+      "location": "centralus",
+      "resourceGroup": "NP-NinjaPawsSite-CentralUS",
+      "staticWebAppName": "np-ninjapaws-site-centralus",
+      "siteSku": "Free",
+      "customDomain": "ninjapaws.org",
+      "publicSiteUrl": "https://ninjapaws.org"
+    }
+  }
+}

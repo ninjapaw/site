@@ -1,35 +1,36 @@
 targetScope = 'resourceGroup'
 
-@description('Short environment name used in resource naming.')
-param environmentName string
+@description('Globally unique Azure Static Web App name.')
+@minLength(2)
+@maxLength(40)
+param siteName string
 
-@description('Azure region. Keep this aligned with the Cloud Security Dojo deployment region.')
+@description('Azure region for the Static Web App resource metadata.')
 param location string = resourceGroup().location
 
-@description('Static Web App resource name. Azure Static Web Apps names must be globally unique.')
-param staticWebAppName string
+@description('Deployment environment used for resource tags.')
+param environmentName string = 'development'
 
-@description('SKU for the Static Web App.')
+@description('Static Web Apps plan. Free is recommended until Standard-only features are required.')
 @allowed([
   'Free'
   'Standard'
 ])
-param skuName string = 'Free'
+param siteSkuName string = 'Free'
 
-resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
-  name: staticWebAppName
-  location: location
-  sku: {
-    name: skuName
-    tier: skuName
-  }
-  tags: {
-    project: 'ninjapaws-hq'
-    environment: environmentName
-    owner: 'ninjapaw'
-    managedBy: 'bicep'
+@description('Additional tags applied to the Static Web App.')
+param tags object = {}
+
+module site 'azure/site/main.bicep' = {
+  name: 'static-site'
+  params: {
+    siteName: siteName
+    location: location
+    environmentName: environmentName
+    siteSkuName: siteSkuName
+    tags: tags
   }
 }
 
-output staticWebAppName string = staticWebApp.name
-output defaultHostname string = staticWebApp.properties.defaultHostname
+output siteUrl string = site.outputs.siteUrl
+output defaultHostname string = site.outputs.defaultHostname

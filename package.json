@@ -9,6 +9,8 @@
     "build": "astro build",
     "preview": "astro preview --host 0.0.0.0",
     "check": "astro check",
+    "config:check": "node scripts/deploy-config.mjs --environment dev --check && node scripts/deploy-config.mjs --environment prod --check",
+    "infra:build": "az bicep build --file infra/main.bicep --outfile .bicep-out/main.json && az bicep build --file infra/azure/site/main.bicep --outfile .bicep-out/site.json && az bicep build-params --file infra/azure/site/main.dev.bicepparam --outfile .bicep-out/site.dev.parameters.json && az bicep build-params --file infra/azure/site/main.prod.bicepparam --outfile .bicep-out/site.prod.parameters.json",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

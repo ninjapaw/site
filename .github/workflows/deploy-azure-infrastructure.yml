@@ -1,0 +1,122 @@
+name: Validate and Deploy Azure Infrastructure
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - .github/workflows/deploy-azure-infrastructure.yml
+      - infra/**
+      - config/deploy.config.json
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - .github/workflows/deploy-azure-infrastructure.yml
+      - infra/**
+      - config/deploy.config.json
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment and Azure naming scope (leave as auto-detect to infer from the branch)
+        required: false
+        default: auto-detect
+        type: choice
+        options: [auto-detect, dev, prod]
+      operation:
+        description: Preview changes or provision the Static Web App
+        required: true
+        default: what-if
+        type: choice
+        options: [what-if, deploy]
+
+permissions:
+  contents: read
+
+# Branch dev uses the dev environment, branch main uses the prod environment.
+concurrency:
+  group: azure-infrastructure-${{ github.event_name == 'workflow_dispatch' && ((inputs.environment != '' && inputs.environment != 'auto-detect' && inputs.environment) || (github.ref_name == 'main' && 'prod' || 'dev')) || 'validation' }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Compile Bicep
+        run: |
+          az bicep build --file infra/main.bicep --outfile /dev/null
+          az bicep build --file infra/azure/site/main.bicep --outfile /dev/null
+          az bicep build-params --file infra/azure/site/main.dev.bicepparam --outfile /dev/null
+          az bicep build-params --file infra/azure/site/main.prod.bicepparam --outfile /dev/null
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ (inputs.environment != '' && inputs.environment != 'auto-detect' && inputs.environment) || (github.ref_name == 'main' && 'prod' || 'dev') }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+
+      - name: Resolve deployment configuration
+        env:
+          DEPLOY_ENVIRONMENT: ${{ (inputs.environment != '' && inputs.environment != 'auto-detect' && inputs.environment) || (github.ref_name == 'main' && 'prod' || 'dev') }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: node scripts/deploy-config.mjs --environment "$DEPLOY_ENVIRONMENT" --github-env
+
+      - name: Verify branch matches environment
+        env:
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          case "$SOURCE_REF" in
+            main) detected=prod ;;
+            dev) detected=dev ;;
+            *)
+              echo "::error title=Unsupported branch::Deploy from 'dev' or 'main', not '$SOURCE_REF'."
+              exit 1
+              ;;
+          esac
+
+          if [[ "$DEPLOY_ENVIRONMENT" != "$detected" ]]; then
+            echo "::error title=Branch and environment mismatch::Branch '$SOURCE_REF' maps to $detected, not $DEPLOY_ENVIRONMENT."
+            exit 1
+          fi
+
+          echo "Targeting the $DEPLOY_ENVIRONMENT environment from '$SOURCE_REF'." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate Environment configuration
+        run: bash infra/azure/validate-environment.sh
+
+      - name: Sign in to Azure
+        uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Ensure resource group
+        run: |
+          if [ "$(az group exists --name "$AZURE_RESOURCE_GROUP")" != true ]; then
+            if [ "${{ inputs.operation }}" != deploy ]; then
+              echo "::error title=Missing resource group::$AZURE_RESOURCE_GROUP does not exist. Run this workflow with operation=deploy."
+              exit 1
+            fi
+            az group create --name "$AZURE_RESOURCE_GROUP" --location "$AZURE_LOCATION" --output none
+          fi
+
+      - name: Preview or deploy Static Web App
+        run: |
+          command_name="${{ inputs.operation }}"
+          if [[ "$command_name" == deploy ]]; then command_name=create; fi
+          az deployment group "$command_name" \
+            --name "ninjapaws-hq-site-${GITHUB_RUN_NUMBER}" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters location="$AZURE_LOCATION" siteName="$AZURE_STATIC_WEB_APP_NAME" environmentName="$AZURE_ENVIRONMENT" siteSkuName="$AZURE_SITE_SKU"
