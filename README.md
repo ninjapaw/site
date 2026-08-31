@@ -108,11 +108,11 @@ projects.
 Bicep has no module registry available here, so shared modules and scripts are
 copied into `vendor/pawprint/` with paths mirroring the Pawprint repository:
 
-| Vendored path                                      | Owns                                          |
-| -------------------------------------------------- | --------------------------------------------- |
-| `modules/static-site/main.bicep`                   | The Static Web App and its optional custom domain |
-| `scripts/deploy-config.mjs`                        | Resolving `config/deploy.config.json` to environment variables |
-| `scripts/validate-environment.sh`                  | Refusing malformed deployment variables       |
+| Vendored path                     | Owns                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| `modules/static-site/main.bicep`  | The Static Web App and its optional custom domain              |
+| `scripts/deploy-config.mjs`       | Resolving `config/deploy.config.json` to environment variables |
+| `scripts/validate-environment.sh` | Refusing malformed deployment variables                        |
 
 Do not edit these copies. `kit-bicep-validate.yml` fails the build when one
 drifts from its source, which is what stops a copy quietly becoming a fork.

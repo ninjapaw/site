@@ -1,0 +1,7 @@
+# Vendored from ninjapaw/pawprint and compared byte-for-byte against it.
+# Formatting these locally is exactly the drift the kit gate rejects.
+vendor/
+
+node_modules/
+dist/
+package-lock.json
