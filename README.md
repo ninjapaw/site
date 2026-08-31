@@ -91,7 +91,7 @@ deployment policy and validation behavior stay consistent across Ninja Paws
 projects.
 
 - Infrastructure validation consumes
-  `ninjapaw/pawprint/.github/workflows/kit-bicep-validate.yml@5b51e06db472b7627d417ef3a99824155b4c3411`,
+  `ninjapaw/pawprint/.github/workflows/kit-bicep-validate.yml@3e261301bb1a70bcd25f3891117c16ebd8065ca5`,
   which owns Bicep compilation, linting, and committed-ARM drift detection for
   `infra/**`.
 - `bicepconfig.json` mirrors the Pawprint linter ruleset so local builds and the
