@@ -1,0 +1,15 @@
+# Normalize all text files to LF on checkout and in the index.
+* text=auto eol=lf
+
+# Vendored copies are compared byte-for-byte against ninjapaw/pawprint, so they
+# must not pick up this machine's line endings.
+vendor/pawprint/** text eol=lf
+
+# Explicit binary types (defensive — git usually auto-detects).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
