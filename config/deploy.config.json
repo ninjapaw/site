@@ -12,7 +12,25 @@
     "deploymentTarget": "azure-static-web-app",
     "location": "centralus",
     "siteSku": "Free",
-    "siteBase": "/"
+    "siteBase": "/",
+    "secrets": { "mode": "none" },
+    "resolver": {
+      "required": [
+        "azureEnvironment",
+        "staticWebAppName",
+        "customDomain",
+        "publicSiteUrl"
+      ],
+      "env": {
+        "DEPLOYMENT_TARGET": "deploymentTarget",
+        "AZURE_STATIC_WEB_APP_NAME": "staticWebAppName",
+        "AZURE_SITE_SKU": "siteSku",
+        "AZURE_CUSTOM_DOMAIN": "customDomain",
+        "AZURE_PUBLIC_SITE_URL": "publicSiteUrl",
+        "PUBLIC_SITE_URL": "publicSiteUrl",
+        "PUBLIC_SITE_BASE": "siteBase"
+      }
+    }
   },
   "environments": {
     "dev": {
