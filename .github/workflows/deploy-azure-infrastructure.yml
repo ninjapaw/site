@@ -68,7 +68,7 @@ jobs:
       - name: Resolve deployment configuration
         env:
           DEPLOY_ENVIRONMENT: ${{ (inputs.environment != '' && inputs.environment != 'auto-detect' && inputs.environment) || (github.ref_name == 'main' && 'prod' || 'dev') }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
         run: node scripts/deploy-config.mjs --environment "$DEPLOY_ENVIRONMENT" --github-env
 
       - name: Verify branch matches environment
@@ -97,9 +97,9 @@ jobs:
       - name: Sign in to Azure
         uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID || secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID || secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Ensure resource group
         run: |
