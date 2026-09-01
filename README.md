@@ -77,11 +77,24 @@ Workflows:
 - `promote-dev-to-main.yml` opens the guarded `dev` to `main` promotion pull
   request once `lint.yml` is green.
 
-Configure these per-environment (`dev` and `prod`) GitHub Environment secrets
+Configure these per-environment (`dev` and `prod`) GitHub Environment values
 before enabling deployment:
 
-- `AZURE_STATIC_WEB_APPS_API_TOKEN`
-- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+- Variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+- Secrets: `AZURE_STATIC_WEB_APPS_API_TOKEN`, `CLOUDFLARE_API_TOKEN`
+
+Create `CLOUDFLARE_API_TOKEN` as an account-owned Cloudflare service token, not
+a user token or global API key. Grant `Zone Read` and `DNS Write` only for the
+`ninjapaws.org` zone. This is the one-time trust bootstrap; subsequent
+infrastructure deploys resolve the zone ID, create or update the Azure
+`_dnsauth` TXT record and site CNAME, bind the hostname, and wait for Azure's
+managed certificate automatically. The connector refuses conflicting record
+types and does not manage Cloudflare proxying, TLS, Workers, rules, or account
+settings. Start the local Pawprint Portal and use its Cloudflare DNS panel to
+verify the token, test DNS write access, and store it in both GitHub
+Environments without writing it to disk. The guided route is
+`http://127.0.0.1:4173/setup/cloudflare/`; if that port is occupied, use the
+URL printed by the local portal process.
 
 ## Pawprint integration contract
 

@@ -7,12 +7,14 @@ on:
       - .github/workflows/deploy-azure-infrastructure.yml
       - infra/**
       - config/deploy.config.json
+      - vendor/pawprint/scripts/connect-cloudflare-dns.sh
   pull_request:
     branches: [main, dev]
     paths:
       - .github/workflows/deploy-azure-infrastructure.yml
       - infra/**
       - config/deploy.config.json
+      - vendor/pawprint/scripts/connect-cloudflare-dns.sh
   workflow_dispatch:
     inputs:
       environment:
@@ -71,6 +73,16 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
         run: node scripts/deploy-config.mjs --environment "$DEPLOY_ENVIRONMENT" --github-env
 
+      - name: Resolve DNS authority
+        env:
+          DEPLOY_CONFIG: config/deploy.config.json
+        run: |
+          provider="$(jq -r --arg env "$DEPLOY_ENVIRONMENT" '.environments[$env].dns.provider // .defaults.dns.provider // empty' "$DEPLOY_CONFIG")"
+          zone_name="$(jq -r --arg env "$DEPLOY_ENVIRONMENT" '.environments[$env].dns.zoneName // .defaults.dns.zoneName // empty' "$DEPLOY_CONFIG")"
+          [[ "$provider" == cloudflare ]] || { echo "::error title=Unsupported DNS provider::Expected cloudflare, got '$provider'."; exit 1; }
+          [[ "$zone_name" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error title=Invalid DNS zone::dns.zoneName is missing or malformed."; exit 1; }
+          echo "CLOUDFLARE_ZONE_NAME=$zone_name" >> "$GITHUB_ENV"
+
       - name: Verify branch matches environment
         env:
           SOURCE_REF: ${{ github.ref_name }}
@@ -115,8 +127,29 @@ jobs:
         run: |
           command_name="${{ inputs.operation }}"
           if [[ "$command_name" == deploy ]]; then command_name=create; fi
+          domain_parameters=()
+          if [[ "${{ inputs.operation }}" == what-if ]]; then
+            domain_parameters+=(customDomainName="$AZURE_CUSTOM_DOMAIN")
+          fi
           az deployment group "$command_name" \
             --name "ninjapaws-hq-site-${GITHUB_RUN_NUMBER}" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters location="$AZURE_LOCATION" siteName="$AZURE_STATIC_WEB_APP_NAME" environmentName="$AZURE_ENVIRONMENT" siteSkuName="$AZURE_SITE_SKU"
+            --parameters location="$AZURE_LOCATION" siteName="$AZURE_STATIC_WEB_APP_NAME" environmentName="$AZURE_ENVIRONMENT" siteSkuName="$AZURE_SITE_SKU" "${domain_parameters[@]}"
+
+      - name: Reconcile Cloudflare DNS and Azure custom domain
+        if: inputs.operation == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          : "${CLOUDFLARE_API_TOKEN:?Set CLOUDFLARE_API_TOKEN in the selected GitHub Environment}"
+          bash vendor/pawprint/scripts/connect-cloudflare-dns.sh
+
+      - name: Converge custom domain with Bicep
+        if: inputs.operation == 'deploy'
+        run: |
+          az deployment group create \
+            --name "ninjapaws-hq-domain-${GITHUB_RUN_NUMBER}" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters location="$AZURE_LOCATION" siteName="$AZURE_STATIC_WEB_APP_NAME" environmentName="$AZURE_ENVIRONMENT" siteSkuName="$AZURE_SITE_SKU" customDomainName="$AZURE_CUSTOM_DOMAIN"
